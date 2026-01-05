@@ -21,7 +21,7 @@ public class verifServeur {
                         System.out.println("[REÇU] : " + line);
 
                         // Logique de détection d'anomalie simple
-                        if (line.contains("CPU Usage") && extractValue(line) > 20.0) {
+                        if (line.contains("CPU") && extractValue(line) > 50.0) {
                             System.out.println("⚠️ ALERTE : Charge CPU critique détectée sur un poste !");
                         }
                     }
