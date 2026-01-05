@@ -7,7 +7,7 @@ import oshi.software.os.OperatingSystem;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class verifJoueur {
+public class verifJoueurCPUetRAM {
     public static void main(String[] args) {
         // Initialisation des outils OSHI
         SystemInfo systemInfo = new SystemInfo();
