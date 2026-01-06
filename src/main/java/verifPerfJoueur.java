@@ -1,9 +1,11 @@
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
 import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
+
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.GlobalMemory;
@@ -14,12 +16,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Random;
 
-public class verifJoueurCPUetRAM {
+public class verifPerfJoueur {
 
     private final static String QUEUE_NAME = "monitor_queue";
     private static volatile int clickCount = 0;
 
-    //Listener souris pour CPS
     static class MouseListener implements NativeMouseListener {
         @Override
         public void nativeMousePressed(NativeMouseEvent e) {
@@ -28,7 +29,6 @@ public class verifJoueurCPUetRAM {
     }
 
     public static void main(String[] args) {
-        //Désactiver les logs de JNativeHook
         Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
         logger.setLevel(Level.OFF);
         logger.setUseParentHandlers(false);
@@ -44,7 +44,7 @@ public class verifJoueurCPUetRAM {
         factory.setHost("localhost"); // RabbitMQ tourne sur ton PC via Docker
 
         try {
-            //Activation du trackeur de la souris
+            //Activation du traqueur de la souris
             GlobalScreen.registerNativeHook();
             GlobalScreen.addNativeMouseListener(new MouseListener());
 
@@ -63,7 +63,7 @@ public class verifJoueurCPUetRAM {
                     Random obj = new Random();
                     long[] prevTicks = processor.getSystemCpuLoadTicks();
                     Thread.sleep(1000);
-                    double cpuLoad = obj.nextDouble(101);
+                    double cpuLoad = obj.nextDouble(100.01);
 
                     //Mesure de la RAM
                     long totalMem = memory.getTotal() / 1024 / 1024;

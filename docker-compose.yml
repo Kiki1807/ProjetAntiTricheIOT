@@ -12,7 +12,7 @@ services:
       MYSQL_USER: utilisateur_esport
       MYSQL_PASSWORD: motdepasse123
     ports:
-      - "3306:3306"
+      - "3307:3306"
 
   monitor-server:
     build: .
