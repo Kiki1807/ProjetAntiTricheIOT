@@ -45,8 +45,8 @@ public class verifServeur {
                 String cpuPart = message.split("CPU: ")[1].split("%")[0];
                 double cpuUsage = Double.parseDouble(cpuPart.replace(",", "."));
 
-                if (cpuUsage > 80.0) {
-                    System.out.println("[CRITIQUE] CPU à " + cpuUsage + "% ! Le joueur utilise un logiciel lourd ou subit des lags.");
+                if (cpuUsage > 40.0) {
+                    System.out.println("[CRITIQUE] CPU : " + cpuUsage + "% ! Le joueur utilise un logiciel lourd ou subit des lags.");
                 }
             }
             //Vérification des CPS

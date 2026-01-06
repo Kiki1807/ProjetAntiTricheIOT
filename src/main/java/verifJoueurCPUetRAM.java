@@ -12,6 +12,7 @@ import oshi.software.os.OperatingSystem;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Random;
 
 public class verifJoueurCPUetRAM {
 
@@ -59,9 +60,10 @@ public class verifJoueurCPUetRAM {
 
                 while (true) {
                     //Mesure du CPU
+                    Random obj = new Random();
                     long[] prevTicks = processor.getSystemCpuLoadTicks();
                     Thread.sleep(1000);
-                    double cpuLoad = processor.getSystemCpuLoadBetweenTicks(prevTicks) * 100;
+                    double cpuLoad = obj.nextDouble(101);
 
                     //Mesure de la RAM
                     long totalMem = memory.getTotal() / 1024 / 1024;
