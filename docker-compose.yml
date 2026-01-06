@@ -4,6 +4,16 @@ services:
     ports:
       - "5672:5672"   #Port de rabbit pour l'envoi des données
       - "15672:15672" #Interface web (User/Pass: guest/guest)
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: motdepasse
+      MYSQL_DATABASE: databaseJoueur
+      MYSQL_USER: utilisateur_esport
+      MYSQL_PASSWORD: motdepasse123
+    ports:
+      - "3306:3306"
+
   monitor-server:
     build: .
     depends_on:
