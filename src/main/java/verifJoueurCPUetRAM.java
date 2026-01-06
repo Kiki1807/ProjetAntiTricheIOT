@@ -1,58 +1,99 @@
-
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.GlobalMemory;
 import oshi.software.os.OperatingSystem;
 
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
+import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
+
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class verifJoueurCPUetRAM {
+
+    // Compteur global de clics (CPS)
+    private static volatile int clickCount = 0;
+
+    // Listener souris pour CPS
+    static class MouseListener implements NativeMouseListener {
+        @Override
+        public void nativeMousePressed(NativeMouseEvent e) {
+            clickCount++;
+        }
+    }
+
     public static void main(String[] args) {
-        // Initialisation des outils OSHI
+
+        // Désactiver les logs JNativeHook
+        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+        logger.setLevel(Level.OFF);
+        logger.setUseParentHandlers(false);
+
+        // OSHI : Infos système
         SystemInfo systemInfo = new SystemInfo();
         OperatingSystem os = systemInfo.getOperatingSystem();
         CentralProcessor processor = systemInfo.getHardware().getProcessor();
         GlobalMemory memory = systemInfo.getHardware().getMemory();
 
-        String serverIp = "localhost"; // Mettre l'IP du serveur si c'est un autre PC
+        String serverIp = "localhost"; // ou IP du serveur
         int serverPort = 8080;
+        String playerId = "Joueur-01"; // identifiant du joueur
 
-        System.out.println("=== Client de Monitoring E-sport ===");
-        System.out.println("Tentative de connexion au serveur " + serverIp + ":" + serverPort + "...");
+        try {
+            // Activation du hook souris
+            GlobalScreen.registerNativeHook();
+            GlobalScreen.addNativeMouseListener(new MouseListener());
 
-        // On utilise un try-with-resources pour gérer la connexion Socket
-        try (Socket socket = new Socket(serverIp, serverPort);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+            System.out.println("=== Client Monitoring E-sport ===");
+            System.out.println("Connexion au serveur " + serverIp + ":" + serverPort + "...");
 
-            System.out.println("✅ Connecté au serveur ! Envoi des données en cours...");
+            try (Socket socket = new Socket(serverIp, serverPort);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
 
-            // Boucle de monitoring infinie
-            while (true) {
-                // 1. Calcul de la charge CPU (moyenne sur 1 seconde)
-                long[] prevTicks = processor.getSystemCpuLoadTicks();
-                Thread.sleep(1000);
-                double cpuLoad = processor.getSystemCpuLoadBetweenTicks(prevTicks) * 100;
+                System.out.println("✅ Connecté au serveur ! Envoi des données en cours...");
 
-                // 2. Calcul de la mémoire
-                long totalMem = memory.getTotal() / 1024 / 1024;
-                long availableMem = memory.getAvailable() / 1024 / 1024;
+                // Boucle de monitoring infinie
+                while (true) {
+                    // 1️⃣ CPU
+                    long[] prevTicks = processor.getSystemCpuLoadTicks();
+                    Thread.sleep(1000); // mesure sur 1 seconde
+                    double cpuLoad = processor.getSystemCpuLoadBetweenTicks(prevTicks) * 100;
 
-                // 3. Préparation du message
-                // On formate une ligne claire que le serveur pourra lire facilement
-                String message = String.format("OS: %s | CPU: %.2f%% | RAM: %d/%d MB",
-                        os.getFamily(), cpuLoad, availableMem, totalMem);
+                    // 2️⃣ RAM
+                    long totalMem = memory.getTotal() / 1024 / 1024;
+                    long availableMem = memory.getAvailable() / 1024 / 1024;
+                    long usedMem = totalMem - availableMem;
 
-                // 4. Envoi au serveur
-                out.println(message);
+                    // 3️⃣ CPS
+                    int cps = clickCount;
+                    clickCount = 0;
 
-                // 5. Affichage local (pour debug)
-                System.out.println("Données envoyées : " + message);
+                    // 4️⃣ Préparation du message
+                    String message = String.format(
+                            "[%s] OS: %s | CPU: %.2f%% | RAM: %d/%d MB | CPS: %d",
+                            playerId,
+                            os.getFamily(),
+                            cpuLoad,
+                            usedMem,
+                            totalMem,
+                            cps
+                    );
+
+                    // 5️⃣ Envoi au serveur
+                    out.println(message);
+
+                    // 6️⃣ Affichage local
+                    System.out.println(message);
+                }
+
             }
 
         } catch (Exception e) {
-            System.err.println("❌ Erreur de connexion : " + e.getMessage());
-            System.err.println("Assurez-vous que la classe 'verifServeur' est bien lancée avant le client.");
+            System.err.println("❌ Erreur : " + e.getMessage());
         }
     }
 }
