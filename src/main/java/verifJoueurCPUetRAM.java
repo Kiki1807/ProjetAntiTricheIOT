@@ -1,21 +1,21 @@
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
+import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.GlobalMemory;
 import oshi.software.os.OperatingSystem;
 
-import com.github.kwhat.jnativehook.GlobalScreen;
-import com.github.kwhat.jnativehook.NativeHookException;
-import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
-import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
-
-import java.io.PrintWriter;
-import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class verifJoueurCPUetRAM {
 
-    //Compteur de CPS
+    private final static String QUEUE_NAME = "monitor_queue";
     private static volatile int clickCount = 0;
 
     //Listener souris pour CPS
@@ -27,7 +27,6 @@ public class verifJoueurCPUetRAM {
     }
 
     public static void main(String[] args) {
-
         //Désactiver les logs de JNativeHook
         Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
         logger.setLevel(Level.OFF);
@@ -39,54 +38,51 @@ public class verifJoueurCPUetRAM {
         CentralProcessor processor = systemInfo.getHardware().getProcessor();
         GlobalMemory memory = systemInfo.getHardware().getMemory();
 
-        String serverIp = "localhost";
-        int serverPort = 8080;
-        String playerId = "Joueur-01"; // identifiant du joueur
+        //Configuration RabbitMQ
+        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost("localhost"); // RabbitMQ tourne sur ton PC via Docker
 
         try {
             //Activation du trackeur de la souris
             GlobalScreen.registerNativeHook();
             GlobalScreen.addNativeMouseListener(new MouseListener());
 
-            System.out.println("=== Client Monitoring E-sport ===");
-            System.out.println("Connexion au serveur " + serverIp + ":" + serverPort + "...");
+            System.out.println("=== Client Monitoring E-sport (RabbitMQ) ===");
 
-            try (Socket socket = new Socket(serverIp, serverPort);
-                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+            //Connexion à RabbitMQ
+            try (Connection connection = factory.newConnection();
+                 Channel channel = connection.createChannel()) {
 
-                System.out.println("Connection au serveur réussi ! Envoi des données en cours...");
+                //Déclaration de la file
+                channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+                System.out.println("Connection à RabbitMQ réussi. Envoi des données...");
 
-                //Boucle permettant l'envoie continue des données
                 while (true) {
-                    //CPU
+                    //Mesure du CPU
                     long[] prevTicks = processor.getSystemCpuLoadTicks();
-                    Thread.sleep(1000); //On mesure les données sur 1 seconde
+                    Thread.sleep(1000);
                     double cpuLoad = processor.getSystemCpuLoadBetweenTicks(prevTicks) * 100;
 
-                    //RAM
+                    //Mesure de la RAM
                     long totalMem = memory.getTotal() / 1024 / 1024;
-                    long availableMem = memory.getAvailable() / 1024 / 1024;
-                    long usedMem = totalMem - availableMem;
+                    long usedMem = (memory.getTotal() - memory.getAvailable()) / 1024 / 1024;
 
-                    //CPS
+                    //Mesure des CPS
                     int cps = clickCount;
                     clickCount = 0;
 
-                    //Préparation du message
+                    // Préparation du message
                     String message = String.format(
                             "OS: %s | CPU: %.2f%% | RAM: %d/%d MB | CPS: %d",
                             os.getFamily(), cpuLoad, usedMem, totalMem, cps
                     );
 
-                    //Envoi au serveur
-                    out.println(message);
+                    //Envoie À RABBITMQ
+                    channel.basicPublish("", QUEUE_NAME, null, message.getBytes(StandardCharsets.UTF_8));
 
-                    //Affichage dans le terminal
-                    System.out.println(message);
+                    System.out.println(" [x] Envoyé : " + message);
                 }
-
             }
-
         } catch (Exception e) {
             System.err.println("Erreur : " + e.getMessage());
         }

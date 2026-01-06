@@ -1,0 +1,13 @@
+services:
+  rabbitmq:
+    image: rabbitmq:management-alpine
+    ports:
+      - "5672:5672"   #Port de rabbit pour l'envoi des données
+      - "15672:15672" #Interface web (User/Pass: guest/guest)
+  monitor-server:
+    build: .
+    depends_on:
+      - rabbitmq
+    environment:
+      - JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
+    restart: always

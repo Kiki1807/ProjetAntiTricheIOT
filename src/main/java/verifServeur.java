@@ -1,45 +1,63 @@
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.ServerSocket;
-import java.net.Socket;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.DeliverCallback;
+import java.nio.charset.StandardCharsets;
 
 public class verifServeur {
-    public static void main(String[] args) {
-        int port = 8080; // Le port sur lequel le serveur écoute
+    private final static String QUEUE_NAME = "monitor_queue";
 
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Serveur de vérification démarré sur le port " + port);
-            System.out.println("En attente de données du moniteur...");
+    public static void main(String[] args) throws Exception {
+        ConnectionFactory factory = new ConnectionFactory();
 
-            while (true) {
-                // Le serveur accepte une connexion entrante
-                try (Socket socket = serverSocket.accept();
-                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+        //"rabbitmq" est le nom du service dans le docker-compose.yml
+        factory.setHost("rabbitmq");
+        factory.setPort(5672);
+        factory.setUsername("guest");
+        factory.setPassword("guest");
 
-                    String line;
-                    while ((line = in.readLine()) != null) {
-                        System.out.println("[REÇU] : " + line);
+        //Connexion au broker RabbitMQ
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
 
-                        // Logique de détection d'anomalie simple
-                        if (line.contains("CPU") && extractValue(line) > 50.0) {
-                            System.out.println("⚠️ ALERTE : Charge CPU critique détectée sur un poste !");
-                        }
-                    }
-                } catch (Exception e) {
-                    System.out.println("Erreur lors de la réception : " + e.getMessage());
+        //On déclare la file
+        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+        System.out.println(" [*] Serveur Anti-Triche pret. En attente de messages...");
+
+        //On définit ce qu'on fait quand un message arrive
+        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+            String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
+            System.out.println(" [RECU] : " + message);
+
+            //Analyse du message pour la détection de triche/alerte
+            analyserMessage(message);
+        };
+
+        //On commence à lire la file
+        channel.basicConsume(QUEUE_NAME, true, deliverCallback, consumerTag -> { });
+    }
+
+    private static void analyserMessage(String message) {
+        try {
+            //Vérification de l'utilisation du CPU
+            if (message.contains("CPU: ")) {
+                //On découpe la chaîne pour récupérer juste le chiffre avant le %
+                String cpuPart = message.split("CPU: ")[1].split("%")[0];
+                double cpuUsage = Double.parseDouble(cpuPart.replace(",", "."));
+
+                if (cpuUsage > 80.0) {
+                    System.out.println("[CRITIQUE] CPU à " + cpuUsage + "% ! Le joueur utilise un logiciel lourd ou subit des lags.");
+                }
+            }
+            //Vérification des CPS
+            if (message.contains("CPS: ")) {
+                int cps = Integer.parseInt(message.split("CPS: ")[1].trim());
+                if (cps > 20) {
+                    System.out.println("[ALERTE] CPS: " + cps + " ! Suspicion de Macro/Autoclick.");
                 }
             }
         } catch (Exception e) {
-            System.err.println("Impossible de démarrer le serveur : " + e.getMessage());
-        }
-    }
-
-    // Petite méthode pour extraire le nombre d'une chaîne comme "CPU Usage: 95,00%"
-    private static double extractValue(String line) {
-        try {
-            return Double.parseDouble(line.replaceAll("[^0-9,.]", "").replace(",", "."));
-        } catch (Exception e) {
-            return 0.0;
+            System.out.println(" [!] Erreur d'analyse du message : " + e.getMessage());
         }
     }
 }
