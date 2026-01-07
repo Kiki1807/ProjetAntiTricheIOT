@@ -9,4 +9,4 @@ Le schema de notre infrastructure actuellement. On récupère les données, on l
 
 Voici un schéma amélioré de l'infrastructure que nous aurions pu faire.
 A la place de récupéré les données, et de les mettres dans un seul message nous aurions pu les mettre dans un objet avec la date et l'heure. Les envoyés avec RabbitMQ dans deux container, un qui s'occupe d'inssérer les données dans la base de données et un autre qui s'occupe de regarder s'il y a une alerte et d'insérer l'alerte dans la table.  
-<img width="1305" height="501" alt="image" src="https://github.com/user-attachments/assets/78837013-416d-4010-a78b-b073aff48878" />
+<img width="1468" height="566" alt="image" src="https://github.com/user-attachments/assets/a176ad24-f470-4b5f-b2a7-bf232b5643cd" />
