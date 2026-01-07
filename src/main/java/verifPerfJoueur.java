@@ -41,7 +41,7 @@ public class verifPerfJoueur {
 
         //Configuration RabbitMQ
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost"); // RabbitMQ tourne sur ton PC via Docker
+        factory.setHost("localhost"); //RabbitMQ tourne sur le pc Docker
 
         try {
             //Activation du traqueur de la souris
